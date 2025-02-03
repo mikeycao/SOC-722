@@ -1,0 +1,154 @@
+---
+title: "Probability Exercise for SOC 722"
+author: "Michael Cao"
+date: 1/29/25
+format:
+  html:
+    self-contained: true
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+#| echo: false
+library(tidyverse)
+library(tinytable)
+library(gssr)
+```
+
+# Table #1
+
+For the first 2x2 contingency table, I pulled and recoded the variables *polviews* (respondent's political views) and *cappun* (respondent's support for capital punishment) from the 2022 GSS.
+
+```{r}
+#| echo: false
+gss2022 <- gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+
+d <- gss2022 |> 
+  select(cappun, polviews) |> 
+  drop_na() |> 
+  mutate(vcappun = if_else(cappun == 1, 
+                          "Favor Capital Punishment", 
+                          "Oppose Capital Punishment" ),
+         vpolviews = case_when(polviews %in% c(1, 2, 3) ~ "Liberal",
+                               polviews %in% c(5, 6, 7) ~ "Conservative")) |> 
+  drop_na(vpolviews) |>
+  select(vcappun, vpolviews)
+
+ct <- d |>
+  group_by(vcappun, vpolviews) |> 
+  tally() |> 
+  pivot_wider(names_from = vcappun, values_from = n) |>
+  rename("Political Views" = vpolviews)
+
+tt(ct)
+```
+
+**Marginal Probabilities:**
+
+$P(\text{Conservative})$ = $\frac{898+274}{898+274+506+721} = 0.49$
+
+$P(\text{Liberal})$ = $\frac{506+721}{2399} = 0.51$
+
+$P(\text{Favor Capital Punishment})$ = $\frac{898+506}{2399} = 0.58$
+
+$P(\text{Oppose Capital Punishment})$ = $\frac{274+721}{2399} = 0.42$
+
+**Joint Probabilities:**
+
+$P(\text{Conservative} \cap \text{Favor Capital Punishment})$ = $\frac{898}{2399} = 0.37$
+
+$P(\text{Conservative} \cap \text{Oppose Capital Punishment})$ = $\frac{274}{2399} = 0.11$
+
+$P(\text{Liberal} \cap \text{Favor Capital Punishment})$ = $\frac{506}{2399} = 0.21$
+
+$P(\text{Liberal} \cap \text{Oppose Capital Punishment})$ = $\frac{721}{2399} = 0.30$
+
+**Conditional Probabilities:**
+
+$P(\text{Conservative} | \text{Favor Capital Punishment})$ = $\frac{898}{506+898} = 0.64$
+
+$P(\text{Liberal} | \text{Favor Capital Punishment})$ = $\frac{506}{506+898} = 0.36$
+
+$P(\text{Conservative} | \text{Oppose Capital Punishment})$ = $\frac{274}{274+721} = 0.28$
+
+$P(\text{Liberal} | \text{Oppose Capital Punishment})$ = $\frac{721}{274+721} = 0.72$
+
+$P(\text{Favor Capital Punishment} | \text{Conservative})$ = $\frac{898}{898+274} = 0.77$
+
+$P(\text{Oppose Capital Punishment} | \text{Conservative})$ = $\frac{721}{274+721} = 0.23$
+
+$P(\text{Favor Capital Punishment} | \text{Liberal})$ = $\frac{506}{506+721} = 0.41$
+
+$P(\text{Oppose Capital Punishment} | \text{Liberal})$ = $\frac{721}{506+721} = 0.59$
+
+# Table #2
+
+For the second 2x2 contingency table, I pulled and recoded the variables *satfin* (respondent's financial satisfaction) and *god* (respondent's belief in a higher power) from the 2022 GSS.
+
+```{r}
+#| echo: false
+gss2022 <- gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+
+d2 <- gss2022 |> 
+  select(god, satfin) |> 
+  drop_na() |> 
+  mutate(vgod = if_else(god == 6, 
+                          "NO Doubt in GOD", 
+                          "Any Doubts in GOD" ),
+         vsatfin = if_else(satfin == 1, 
+                           "Well Satisfied", 
+                           "Not Well Satisfied")) |> 
+  select(vgod, vsatfin)
+
+ct2 <- d2 |>
+  group_by(vgod, vsatfin) |> 
+  tally() |> 
+  pivot_wider(names_from = vgod, values_from = n) |>
+  rename("Financial Satisfaction" = vsatfin)
+
+tt(ct2)
+```
+
+**Marginal Probabilities:**
+
+$P(\text{Not Well Satisfied})$ = $\frac{1004+1056}{1004+1056+357+311} = 0.76$
+
+$P(\text{Well Satisfied})$ = $\frac{357+311}{2728} = 0.25$
+
+$P(\text{Any Doubts in God})$ = $\frac{1004+357}{2728} = 0.50$
+
+$P(\text{No Doubts in God})$ = $\frac{1056+311}{2728} = 0.50$
+
+**Joint Probabilities:**
+
+$P(\text{Not Well Satisfied} \cap \text{Any Doubts in God})$ = $\frac{1004}{2728} = 0.37$
+
+$P(\text{Not Well Satisfied} \cap \text{No Doubts in God})$ = $\frac{1056}{2728} = 0.39$
+
+$P(\text{Well Satisfied} \cap \text{Any Doubts in God})$ = $\frac{357}{2728} = 0.13$
+
+$P(\text{Well Satisfied} \cap \text{No Doubts in God})$ = $\frac{311}{2728} = 0.11$
+
+**Conditional Probabilities:**
+
+$P(\text{Not Well Satisfied} | \text{Any Doubts in God})$ = $\frac{1004}{1004+357} = 0.74$
+
+$P(\text{Well Satisfied} | \text{Any Doubts in God})$ = $\frac{357}{1004+357} = 0.26$
+
+$P(\text{Not Well Satisfied} | \text{No Doubts in God})$ = $\frac{1056}{1056+311} = 0.77$
+
+$P(\text{Well Satisfied} | \text{No Doubts in Godd})$ = $\frac{311}{1056+311} = 0.23$
+
+$P(\text{Any Doubts in God} | \text{Not Well Satisfied})$ = $\frac{1004}{1004+1056} = 0.49$
+
+$P(\text{No Doubts in God} | \text{Not Well Satisfied})$ = $\frac{1056}{1004+1056} = 0.51$
+
+$P(\text{Any Doubts in God} | \text{Well Satisfied})$ = $\frac{357}{357+311} = 0.53$
+
+$P(\text{No Doubts in God} | \text{Well Satisfied})$ = $\frac{311}{357+311} = 0.47$
