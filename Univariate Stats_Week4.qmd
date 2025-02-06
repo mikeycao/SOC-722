@@ -1,0 +1,149 @@
+---
+title: "Univariate Stats_Week4"
+author: "Michael Cao"
+date: 2/5/25
+format:
+  html:
+    self-contained: true
+editor: visual
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+library(gssr)
+```
+
+```{r, results = "hide"}
+gss2022 <- gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+glimpse(gss2022$age)
+mean(gss2022$age, na.rm = TRUE)
+sd(gss2022$age, na.rm = TRUE)
+```
+
+**Exercise #1:**
+
+Describing the center and spread for the variable *age*, drawn from the 2022 GSS.
+
+```{r}
+var1_plot <- gss2022 |>
+  select(age) |>
+  drop_na()
+
+ggplot(var1_plot, aes(x = age)) +
+  geom_histogram(fill = "lightgray", color = "black", binwidth = 7.1) +
+  scale_x_continuous(breaks = seq(min(var1_plot$age), max(var1_plot$age), by = 7.1)) +
+  labs(x = "Age (in years)",
+       y = "Count",
+       caption = "Source: 2022 GSS",
+       title = "Distribution of age (n = 3893)") +
+  theme_classic()
+```
+
+Mean ($\bar{x}_{age}$):
+
+$\bar{x}_{age} = \frac{1}{n} \sum_{i=1}^{n} x_i$
+
+$\bar{x}_{age} = `r mean(gss2022$age, na.rm = TRUE)`$
+
+Standard Deviation ($s_{age}$):
+
+$s_{age} = \sqrt{\frac{1}{n-1} \sum_{i=1}^{n}(x_i-\bar{x}_{age})^2}$
+
+$s_{age} = `r sd(gss2022$age, na.rm = TRUE)`$
+
+$\bar{x}_{age}$ measures the center of the *age* sample distribution, which here is balanced around 48.2 years old---so I'd say most of the sample tends to be middle-aged. $s_{age}$ tells us each observation (respondent's age) in the sample deviates from the mean (48.2 years) by a typical distance of 17.7 years. This seems pretty high, which would suggest a good amount of variability in sample ages, including both younger and older ages. 
+
+Plotting the probability density distribution of *age*, and then approximating the normal distribution of *age*, given $\text{age} \sim N(`r round(mean(gss2022$age, na.rm = TRUE), 1)`, `r round(sd(gss2022$age, na.rm = TRUE), 1)`)$: 
+
+```{r}
+ggplot(var1_plot, aes(x = age)) +
+  geom_histogram(aes(y = after_stat(density)), fill = "lightgray", color = "black", binwidth = 7.1) +
+  geom_density(col = "#17EFF6", lwd = 1) + 
+  stat_function(fun = dnorm, args = list(mean = mean(var1_plot$age), #drew this from the slides
+                                        sd = sd(var1_plot$age)),
+                col = "#F77A76", lwd = 1, linetype = "dashed") +  
+  scale_x_continuous(breaks = seq(min(var1_plot$age), max(var1_plot$age), by = 7.1)) +
+  labs(x = "Age (in years)",
+       y = "Density",
+       caption = "Source: 2022 GSS",
+       title = "Probability Density Distribution of age Approximated as a Normal Distribution") +
+  theme_classic()
+```
+
+```{r, results = "hide"}
+glimpse(gss2022$hompop)
+mean(gss2022$hompop, na.rm = TRUE)
+sd(gss2022$hompop, na.rm = TRUE)
+```
+
+Comparing the normal approximation to the observed empirical distribution, we notice: 
+
+* The normal approximation is simultaneously under-approximating the frequency of tail-end younger ages and older ages, while over-approximating the frequency of middle ages in the sample.
+
+* As a consequence of this, the normal approximation seems to miss the slight bimodality of the empirical sample distribution that has peaks towards young and older ages.
+
+* The normal approximation also assumes the sample distribution stretches to non-existent ages lesser or greater, respectively, than the minimum and maximum values of the sample. 
+
+**Exercise #2:**
+
+Describe the center and spread for the variable *hompop* (household size), drawn from the 2022 GSS. I use `geom_bar()` in my `ggplot()` argument because I treat *hompop* as discrete. 
+
+```{r}
+var2_plot <- gss2022 |> 
+  select(hompop) |>
+  drop_na()
+
+ggplot(var2_plot, aes(x = hompop)) +
+  geom_bar(fill = "lightgray", color = "black") +  # I use geom_bar in my ggplot argument because I treat *hompop* as discrete. 
+  scale_x_continuous(breaks = 1:12) +
+  labs(x = "Household Size", 
+       y = "Count",
+       caption = "Source: 2022 GSS",
+       title = "Distribution of hompop (n = 2079)") +
+  theme_classic()
+```
+
+Mean ($\bar{x}_{homepop}$):
+
+$\bar{x}_{homepop} = \frac{1}{n} \sum_{i=1}^{n} x_i$
+
+$\bar{x}_{pop} = `r mean(gss2022$hompop, na.rm = TRUE)`$
+
+Standard Deviation ($s_{homepop}$):
+
+$s_{homepop} = \sqrt{\frac{1}{n-1} \sum_{i=1}^{n}(x_i-\bar{x}_{homepop})^2}$
+
+$s_{homepop} = `r sd(gss2022$hompop, na.rm = TRUE)`$
+
+$\bar{x}_{hompop}$ measures the center of the *hompop* sample distribution, which here is balanced around a household size of 2.4. I am not sure about exact relationships, but it appears the sample tends to live with another person (likely a partner or significant other). $s_{hompop}$ tells us each observation (respondent's household size) in the sample deviates from the mean (2.4) by a typical distance of 1.5. This suggests pretty low variability in sample household sizes, which indicates most household sizes don't get too smaller or bigger than 2.4. 
+
+Plotting the probability density distribution of *hompop*, and then approximating the normal distribution of *hompop*, given $\text{hompop} \sim N(`r round(mean(gss2022$hompop, na.rm = TRUE), 1)`, `r round(sd(gss2022$hompop, na.rm = TRUE), 1)`)$:
+
+```{r}
+ggplot(var2_plot, aes(x = hompop)) +
+  geom_histogram(aes(y = after_stat(density)), fill = "lightgray", color = "black", binwidth = 1) + 
+  stat_function(fun = dnorm, #drew this from the slides
+                args = list(mean = mean(var2_plot$hompop),
+                            sd = sd(var2_plot$hompop)), 
+                col = "#F77A76", lwd = 1, linetype = "dashed") + 
+  geom_density(col = "#17EFF6", lwd = 1) + 
+  scale_x_continuous(breaks = 1:12) +
+  labs(x = "Household Size",
+       y = "Density", 
+       caption = "Source: 2022 GSS",
+       title = "Probability Density Distribution of hompop Approximated as a Normal Distribution") + 
+  theme_classic()
+```
+
+Comparing the normal approximation to the observed empirical distribution, we notice: 
+
+* Though both distributions are unimodal, the normal approximation appears to miss the right-skew of the sample distribution. 
+
+* Because the normal approximation assumes a symmetrical shape, a glaring issue is that it assumes negative household sizes, which is not possible. I suppose 12+ household sizes is theoretically possible, but extremely rare, which actually I think is captured by the normal approximation. 
+
+* The normal approximation is also under-approximating the frequency of smaller household sizes in the sample distribution. 
