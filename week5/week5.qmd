@@ -1,7 +1,13 @@
 ---
-title: "week5"
-format: html
+title: "Week5"
+author: "Michael Cao"
+date: 2/5/25
+format:
+  html:
+    self-contained: true
 editor: visual
+execute:
+  echo: false
+  message: false
+  warning: false
 ---
-
-## 
