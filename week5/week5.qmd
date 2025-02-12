@@ -1,14 +1,184 @@
 ---
-title: "Week5"
+title: "Univariate Inference_Week5"
 author: "Michael Cao"
-date: 2/5/25
+date: 2/10/25
 format:
   html:
     self-contained: true
-editor: visual
+editor: source
 execute:
   echo: false
   message: false
   warning: false
+  cache: true 
 ---
-fff
+
+```{r}
+library(tidyverse)
+library(gssr)
+```
+
+**Exercise 1a.**
+
+Calculating $\bar{x}$, $s$, and confidence intervals for *age* from the 2022 GSS. (Treated as continuous).
+
+```{r, results = "hide"}
+gss2022 <-  gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+sum(!is.na(gss2022$age))
+```
+
+$\bar{x}_{age} = `r round(mean(gss2022$age, na.rm = TRUE), 1)`$
+
+$s_{age} = `r round(sd(gss2022$age, na.rm = TRUE), 1)`$
+
+Formula for Standard Error: $\text{SE}_{age} = \frac{{s}_{age}}{\sqrt{n}}$
+
+$\text{SE}_{age} = `r round(sd(gss2022$age, na.rm = TRUE)/sqrt(3893), 3)`$ 
+
+```{r}
+mean_age <- 48.2
+se_age <- 0.284
+lower89_age <- mean_age - (1.598 * se_age)
+upper89_age <- mean_age + (1.598 * se_age)
+lower95_age <- mean_age - (1.96 * se_age)
+upper95_age <- mean_age + (1.96 * se_age)
+lower99_age <- mean_age - (2.58 * se_age)
+upper99_age <- mean_age + (2.58 * se_age)
+```
+
+*89% confidence interval:* $\{`r round(lower89_age, 1)`, `r round(upper89_age, 1)`\}$ This tell us that we constantly repeated random samples, and took a 89% confidence interval from each sample, in the long run 89% of those intervals would contain the true population mean age. 
+
+*95% confidence interval:* $\{`r round(lower95_age, 1)`, `r round(upper95_age, 1)`\}$ This tell us that we constantly repeated random samples, and took a 95% confidence interval from each sample, in the long run 95% of those intervals would contain the true population mean age. 
+
+*99% confidence interval:* $\{`r round(lower99_age, 1)`, `r round(upper99_age, 1)`\}$ This tell us that we constantly repeated random samples, and took a 99% confidence interval from each sample, in the long run 99% of those intervals would contain the true population mean age. 
+
+**Exercise 1b.**
+
+Calculating $\bar{x}$, $s$, and confidence intervals for *born* (whether respondents were born in the U.S. or not) from the 2022 GSS. (Treated as binary).
+
+```{r, results = "hide"}
+sum(!is.na(gss2022$born))
+gss2022$born <- ifelse(gss2022$born == 2, 0, gss2022$born)
+sd_born <- sqrt(0.848 * (1 - 0.848))
+```
+
+$\hat{p}_{born} = `r round(mean(gss2022$born, na.rm = TRUE), 3)`$
+
+$s_{born} = `r round(sd_born, 3)`$
+
+$\text{SE}_{born} = `r round(sd_born/sqrt(4118), 5)`$ 
+
+```{r}
+phat_born <- 0.848
+se_born <- 0.00559
+lower89_born <- phat_born - (1.598 * se_born)
+upper89_born <- phat_born + (1.598 * se_born)
+lower95_born <- phat_born - (1.96 * se_born)
+upper95_born <- phat_born + (1.96 * se_born)
+lower99_born <- phat_born - (2.58 * se_born)
+upper99_born <- phat_born + (2.58 * se_born)
+```
+
+*89% confidence interval:* $\{`r round(lower89_born, 3)`, `r round(upper89_born, 3)`\}$ This tell us that we constantly repeated random samples, and took a 89% confidence interval from each sample, in the long run 89% of those intervals would contain the true population proportion of native-borns. 
+
+*95% confidence interval:* $\{`r round(lower95_born, 3)`, `r round(upper95_born, 3)`\}$ This tell us that we constantly repeated random samples, and took a 95% confidence interval from each sample, in the long run 95% of those intervals would contain the true population proportion of native-borns. 
+
+*99% confidence interval:* $\{`r round(lower99_born, 3)`, `r round(upper99_born, 3)`\}$ This tell us that we constantly repeated random samples, and took an 99% confidence interval from each sample, in the long run 99% of those intervals would contain the true population proportion of native-borns. 
+
+**Exercise 2a.**
+
+Simulating random samples of *age* an increasing number of times:
+
+```{r}
+set.seed(999)
+sim100_age <- tibble(sim_id = 1:100) |>
+  rowwise() |>
+  mutate(samp_mean = mean(rnorm(3893, mean = 48.2, sd = 17.7)))
+
+sim1000_age <- tibble(sim_id = 1:1000) |>
+  rowwise() |>
+  mutate(samp_mean = mean(rnorm(3893, 48.2, 17.7)))
+
+sim10000_age <- tibble(sim_id = 1:10000) |>
+  rowwise() |>
+  mutate(samp_mean = mean(rnorm(3893, 48.2, 17.7)))
+
+sim100000_age <- tibble(sim_id = 1:100000) |>
+  rowwise() |>
+  mutate(samp_mean = mean(rnorm(3893, 48.2, 17.7)))
+
+sim1000000_age <- tibble(sim_id = 1:1000000) |>
+  rowwise() |>
+  mutate(samp_mean = mean(rnorm(3893, 48.2, 17.7)))
+```
+
+```{r}
+empirical_se_age_sim100 <- sd(sim100_age$samp_mean)
+empirical_se_age_sim1000 <- sd(sim1000_age$samp_mean)
+empirical_se_age_sim10000 <- sd(sim10000_age$samp_mean)
+empirical_se_age_sim100000 <- sd(sim100000_age$samp_mean)
+empirical_se_age_sim1000000 <- sd(sim1000000_age$samp_mean)
+
+
+se_age_tibble <- tibble(
+  number_samples = c(100, 1000, 10000, 100000, 1000000),
+  empirical_se = c(empirical_se_age_sim100, 
+                   empirical_se_age_sim1000, 
+                   empirical_se_age_sim10000, 
+                   empirical_se_age_sim100000,
+                   empirical_se_age_sim1000000)
+)
+old <- options(pillar.sigfig = 6)
+print(se_age_tibble)
+```
+
+Utilizing the Law of Large Numbers and the CLT, if we simulate a larger and larger (e.g., an infinite) number of random samples, we see how the empirical standard error of the simulated sampling distributions of sample means eventually converges onto a known value, the theoretical/analytic standard error of $0.284$, given $n = 3893$ results in a normal approximation of sample means.
+
+**Exercise 2b.**
+
+Simulating random samples of *born* an increasing number of times:
+
+```{r}
+set.seed(210)
+sim100_born <- tibble(sim_id = 1:100) |>
+  rowwise() |>
+  mutate(samp_prop = mean(rbinom(4118, size = 1, prob = 0.848)))
+  
+sim1000_born <- tibble(sim_id = 1:1000) |>
+  rowwise() |>
+  mutate(samp_prop = mean(rbinom(4118, 1, 0.848)))
+
+sim10000_born <- tibble(sim_id = 1:10000) |>
+  rowwise() |>
+  mutate(samp_prop = mean(rbinom(4118, 1, 0.848)))
+
+sim100000_born <- tibble(sim_id = 1:100000) |>
+  rowwise() |>
+  mutate(samp_prop = mean(rbinom(4118, 1, 0.848)))
+
+sim1000000_born <- tibble(sim_id = 1:1000000) |>
+  rowwise() |>
+  mutate(samp_prop = mean(rbinom(4118, 1, 0.848)))
+```
+
+```{r}
+empirical_se_born_sim100 <- sd(sim100_born$samp_prop)
+empirical_se_born_sim1000 <- sd(sim1000_born$samp_prop)
+empirical_se_born_sim10000 <- sd(sim10000_born$samp_prop)
+empirical_se_born_sim100000 <- sd(sim100000_born$samp_prop)
+empirical_se_born_sim1000000 <- sd(sim1000000_born$samp_prop)
+
+
+se_born_tibble <- tibble(
+  number_samples = c(100, 1000, 10000, 100000, 1000000), 
+  empirical_se = c(empirical_se_born_sim100,
+                   empirical_se_born_sim1000,
+                   empirical_se_born_sim10000,
+                   empirical_se_born_sim100000,
+                   empirical_se_born_sim1000000)
+)
+print(se_born_tibble)
+```
+
+Utilizing the Law of Large Numbers and the CLT, if we simulate a larger and larger (e.g., an infinite) number of random samples, we see how the empirical standard error of the simulated sampling distributions of sample proportions eventually converges onto a known value, the theoretical/analytic standard error of $0.00559$, given $n = 4118$ results in a normal approximation of sample means.
