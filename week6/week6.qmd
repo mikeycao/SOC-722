@@ -79,7 +79,7 @@ ggplot(data.frame(x = c(0.03, 0.17)),
   theme_classic()
 ```
 
-6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that 10% of our reference population is widowed, the probability of obtaining the sample statistic (that 3% of the sample is widowed) is essentially 0, as our p-value corresponds to an area in the tail-ends of the null distribution that is so small it is practically 0. 
+6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that 10% of our reference population is widowed, the probability of obtaining a sample statistic (as low as 3% of the sample being widowed) is essentially 0, as our p-value corresponds to an area in the tail-ends of the null distribution that is so small it is practically 0. 
 
 **Hypothesis Test #2**
 
@@ -138,7 +138,7 @@ ggplot(data.frame(x = c(0.4, 0.6)),
   theme_classic()
 ```
 
-6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that 50% of our reference population voted for Hillary Clinton, the probability of obtaining the sample statistic (that 55% of the sample voted for Clinton) is essentially 0, as our p-value corresponds to an area in the tail-ends of the null distribution that is so small it is practically 0. 
+6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that 50% of our reference population voted for Hillary Clinton, the probability of obtaining a sample statistic (as high as 55% of the sample voting for Clinton) is essentially 0, as our p-value corresponds to an area in the tail-ends of the null distribution that is so small it is practically 0. 
 
 **Hypothesis Test #3** 
 
@@ -196,7 +196,7 @@ ggplot(data.frame(x = c(173, 186)),
   theme_classic()
 ```
 
-6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that the mean weight of our reference population was 180 pounds, the probability of obtaining the sample statistic (that the mean sample weight is 185 pounds) is essentially 0, as our p-value corresponds to an area in the tail-ends of the null distribution that is negligible.  
+6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that the mean weight of our reference population was 180 pounds, the probability of obtaining a sample statistic (as high as the mean sample weight of 185 pounds) is essentially 0, as our p-value corresponds to an area in the tail-ends of the null distribution that is negligible.  
 
 **Hypothesis Test #4**
 
@@ -254,5 +254,5 @@ ggplot(data.frame(x = c(0.8, 1.2)),
        y = "(Probability) Density") + 
   theme_classic()
 ```
-6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that the mean number of times our reference population takes off from work is once per month, the probability of obtaining the sample statistic (that the mean sample time is 0.967) is quite high at 65% of the time. In other words, our p-value corresponds to an area in the tail-ends of the null distribution that is quite large.   
+6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that the mean number of times our reference population takes off from work is once per month, the probability of obtaining the sample statistic as low as 0.967 or alternatively as high as 1,033 is quite probable at 65% of the time. In other words, our p-value corresponds to an area in the tail-ends of the null distribution that is quite large.
 
