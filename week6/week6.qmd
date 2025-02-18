@@ -1,0 +1,258 @@
+---
+title: "Univariate Inference_Week6"
+author: "Michael Cao"
+date: 2/15/25
+format:
+  html:
+    self-contained: true
+editor: source
+execute:
+  echo: false
+  message: false
+  warning: false
+  cache: true 
+---
+```{r}
+library(tidyverse)
+library(gssr)
+```
+
+```{r}
+gss2022 <-  gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+```
+
+**Hypothesis Test #1** 
+
+For the variable *widowed* from 2022 GSS ("If currently married, separated, or divorced: have you ever been widowed?").
+
+```{r, results = "hide"}
+gss2022$widowed <- ifelse(gss2022$widowed == 2, 0, gss2022$widowed) 
+sum(!is.na(gss2022$widowed))
+```
+
+1. Assuming a null hypothesis of $p_{widowed} = 0.10$, or a reference value that 10% of the population has ever been widowed.
+
+2. We set a generic alpha level $\alpha = 0.05$. This is the maximum risk we are willing to accept in making a Type 1 (false positive) error, or that we're willing to falsely reject the null hypothesis 5% of the time. 
+
+3. $\hat{p}_{widowed} =  `r round(mean(gss2022$widowed, na.rm = TRUE), 4)`$; $\text{SE}_{widowed} = `r round(sqrt((0.0322 * (1 - 0.0322)) / 2516), 5)`$
+
+4. $\frac{\left|\hat{p}_{\text{widowed}} - p_{\text{widowed}}\right|}{SE_{\text{widowed}}} = `r round(abs(0.0322 - 0.10) / (0.00352), 3)`$ as our z-statistic. Immediately, this z-statistic stands out as extremely weird, as it suggests $\hat{p}_{widowed}$ is approximately 19 standard errors away from 0.10, which in my opinion is laughable. 
+
+5.
+
+```{r}
+prop_widowed <- 0.0322
+se_widowed <- 0.00352
+lower95_widowed <- prop_widowed - (1.96 * se_widowed)
+upper95_widowed <- prop_widowed + (1.96 * se_widowed)
+```
+
+```{r, echo = TRUE}
+z_widowed <- 19.261
+p_value_widowed <- 2 * (1 - pnorm(abs(z_widowed)))
+p_value_widowed
+```
+
+Calculating a two-tailed p-value, our result is essentially 0, which means we can reject the null hypothesis of 0.10. It is beyond extreme that we would obtain our sample proportion given the expected value of the null distribution. Translating this to a confidence interval, the 95% confidence interval for this sample would be $\{`r round(lower95_widowed, 4)`, `r round(upper95_widowed, 4)`\}$. This interval does not include 0.10, so alternatively, we can use it to reject the null hypothesis. 
+
+```{r}
+ggplot(data.frame(x = c(0.03, 0.17)),
+       aes(x = x)) + 
+  stat_function(fun = dnorm, 
+                args = list(mean = 0.10,
+                            sd = 0.00352),
+                color = "#17EFF6", lwd = 1) +
+  stat_function(fun = dnorm, 
+                args = list(mean = 0.10,
+                            sd = 0.00352),
+                geom = "area",
+                xlim = c(0.0322, 0.168),
+                fill = "#F77A76",
+                alpha = 0.6) +
+  geom_vline(xintercept = 0.0322,
+             linetype = "dashed") +
+  geom_vline(xintercept = 0.168,
+             linetype = "dashed") +
+  labs(x = "Null Distribution of Widower Proportions",
+       y = "(Probability) Density") + 
+  theme_classic()
+```
+
+6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that 10% of our reference population is widowed, the probability of obtaining the sample statistic (that 3% of the sample is widowed) is essentially 0, as our p-value corresponds to an area in the tail-ends of the null distribution that is so small it is practically 0. 
+
+**Hypothesis Test #2**
+
+For the variable *pres16* from 2022 GSS ("Did you vote for Hillary Clinton?").
+
+```{r, results = "hide"}
+gss2022$pres16 <- ifelse(gss2022$pres16 == 1, 1, 0) 
+sum(!is.na(gss2022$pres16))
+```
+
+1. Assuming a null hypothesis of $p_{clinton} = 0.50$, or a reference value that 50% of the population voted for Hillary Clinton.
+
+2. We set a generic alpha level $\alpha = 0.05$. This is the maximum risk we are willing to accept in making a Type 1 (false positive) error, or that we're willing to falsely reject the null hypothesis 5% of the time. 
+
+3. $\hat{p}_{clinton} =  `r round(mean(gss2022$pres16, na.rm = TRUE), 3)`$; $\text{SE}_{clinton} = `r round(sqrt((0.554 * (1 - 0.554)) / 2451), 4)`$
+
+4. $\frac{\left|\hat{p}_{\text{clinton}} - p_{\text{clinton}}\right|}{SE_{\text{clinton}}} = `r round(abs(0.554 - 0.50) / (0.01), 5)`$  as our z-statistic. This z-statistic appears very weird, as it suggests $\hat{p}_{clinton}$ is approximately 5 standard errors away from 0.10 according to the null distribution. 
+
+5.
+
+```{r}
+prop_clinton <- 0.554
+se_clinton <- 0.01
+lower95_clinton <- prop_clinton - (1.96 * se_clinton)
+upper95_clinton <- prop_clinton + (1.96 * se_clinton)
+```
+
+```{r, echo = TRUE}
+z_clinton <- 5.4
+p_value_clinton <- 2 * (1 - pnorm(abs(z_clinton)))
+p_value_clinton
+```
+
+Calculating a two-tailed p-value, our result is 0.00000000666 (essentially 0), which means we can reject the null hypothesis of 0.50. It is quite extreme that we would obtain our sample proportion given the expected value of the null distribution. Translating this to a confidence interval, the 95% confidence interval for this sample would be $\{`r round(lower95_clinton, 4)`, `r round(upper95_clinton, 4)`\}$. This interval does not include 0.50, so alternatively, we can use it to reject the null hypothesis. 
+
+```{r}
+ggplot(data.frame(x = c(0.4, 0.6)),
+       aes(x = x)) + 
+  stat_function(fun = dnorm, 
+                args = list(mean = 0.50,
+                            sd = 0.01),
+                color = "#17EFF6", lwd = 1) +
+  stat_function(fun = dnorm, 
+                args = list(mean = 0.50,
+                            sd = 0.01),
+                geom = "area",
+                xlim = c(0.446, 0.554),
+                fill = "#F77A76",
+                alpha = 0.6) +
+  geom_vline(xintercept = 0.446,
+             linetype = "dashed") +
+  geom_vline(xintercept = 0.554,
+             linetype = "dashed") +
+  labs(x = "Null Distribution of Clinton-Voter Proportions",
+       y = "(Probability) Density") + 
+  theme_classic()
+```
+
+6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that 50% of our reference population voted for Hillary Clinton, the probability of obtaining the sample statistic (that 55% of the sample voted for Clinton) is essentially 0, as our p-value corresponds to an area in the tail-ends of the null distribution that is so small it is practically 0. 
+
+**Hypothesis Test #3** 
+
+For the variable *weight* from the 2022 GSS (reported in pounds, without shoes, includes men and women).
+
+```{r, results = "hide"}
+sum(!is.na(gss2022$weight))
+```
+
+1. Assuming a null hypothesis of $\mu_{weight} = 180$, or a reference value that the average weight of the reference population is 180 pounds. 
+
+2. We set a generic alpha level $\alpha = 0.01$. This is the maximum risk we are willing to accept in making a Type 1 (false positive) error, or that we're willing to falsely reject the null hypothesis 1% of the time. 
+
+3. $\bar{x}_{weight} =  `r round(mean(gss2022$weight, na.rm = TRUE), 3)`$; $\text{SE}_{weight} = `r round(sd(gss2022$weight, na.rm = TRUE) / sqrt(2269), 4)`$
+
+4. $\frac{\left|\bar{x}_{\text{weight}} - \mu_{\text{weight}}\right|}{SE_{\text{weight}}} = `r round(abs(185.002 - 180) / (1.049), 3)`$  as our z-statistic. This z-statistic appears somewhat weird, as it suggests $\bar{x}_{weight}$ is approximately 5 standard errors away from 185 according to the null distribution. 
+
+5. 
+
+```{r}
+mean_weight <- 185.002
+se_weight <- 1.049 
+lower99_weight <- mean_weight - (2.576 * se_weight)
+upper99_weight <- mean_weight + (2.576 * se_weight)
+```
+
+```{r, echo = TRUE}
+z_weight <- 4.768
+p_value_weight <- 2 * (1 - pnorm(abs(z_weight)))
+p_value_weight
+```
+
+Calculating a two-tailed p-value, our result is 0.00000186 (very close to 0), which means we can reject the null hypothesis of 180. It is extreme that we would obtain our sample mean given the expected value of the null distribution. Translating this to a confidence interval, the 99% confidence interval for this sample would be $\{`r round(lower99_weight, 3)`, `r round(upper99_weight, 3)`\}$. This interval does not include 180, so alternatively, we can use it to reject the null hypothesis. 
+
+```{r}
+ggplot(data.frame(x = c(173, 186)),
+       aes(x = x)) + 
+  stat_function(fun = dnorm, 
+                args = list(mean = 180,
+                            sd = 1.049),
+                color = "#17EFF6", lwd = 1) +
+  stat_function(fun = dnorm, 
+                args = list(mean = 180,
+                            sd = 1.049),
+                geom = "area",
+                xlim = c(174.998, 185.002),
+                fill = "#F77A76",
+                alpha = 0.6) +
+  geom_vline(xintercept = 174.998,
+             linetype = "dashed") +
+  geom_vline(xintercept = 185.002,
+             linetype = "dashed") +
+  labs(x = "Null Distribution of Weight Means",
+       y = "(Probability) Density") + 
+  theme_classic()
+```
+
+6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that the mean weight of our reference population was 180 pounds, the probability of obtaining the sample statistic (that the mean sample weight is 185 pounds) is essentially 0, as our p-value corresponds to an area in the tail-ends of the null distribution that is negligible.  
+
+**Hypothesis Test #4**
+
+For the variable *misswork* from 2022 GSS ("During the past 30 days, about how many days did you miss work due to your mental
+or physical health?").
+
+```{r, results = "hide"}
+sum(!is.na(gss2022$misswork))
+```
+
+1. Assuming a null hypothesis of $\mu_{misswork} = 1$, or a reference value that the average number of times the reference population has taken off from for health reasons is 1. 
+
+2. We set a generic alpha level $\alpha = 0.01$. This is the maximum risk we are willing to accept in making a Type 1 (false positive) error, or that we're willing to falsely reject the null hypothesis 1% of the time. 
+
+3. $\bar{x}_{wkinjury} =  `r round(mean(gss2022$misswork, na.rm = TRUE), 3)`$; $\text{SE}_{misswork} = `r round(sd(gss2022$misswork, na.rm = TRUE) / sqrt(2304), 4)`$
+
+4. $\frac{\left|\bar{x}_{\text{misswork}} - \mu_{\text{misswork}}\right|}{SE_{\text{misswork}}} = `r round(abs(0.967 - 1) / (0.0735), 3)`$  as our z-statistic. This z-statistic does not appear very weird, as it suggests $\bar{x}_{misswork}$ is approximately 0.5 standard errors away from 0 according to the null distribution. 
+
+5. 
+
+```{r}
+mean_misswork <- 0.967
+se_misswork <- 0.0735
+lower99_misswork <- mean_misswork - (2.576 * se_misswork)
+upper99_misswork <- mean_misswork + (2.576 * se_misswork)
+```
+
+```{r, echo = TRUE}
+z_misswork <- -0.449 
+p_value_misswork <- 2 * (1 - pnorm(abs(z_misswork)))
+p_value_misswork
+```
+
+Calculating a two-tailed p-value, our result is 0.653, which is much higher than our alpha level, which we fail to reject the null hypothesis of 1. It is unsurprising/very likely that we would obtain our sample mean given the expected value of the null distribution. Translating this to a confidence interval, the 99% confidence interval for this sample would be $\{`r round(lower99_misswork, 3)`, `r round(upper99_misswork, 3)`\}$. This interval does include 1, so alternatively, we can use it to fail to reject the null hypothesis. 
+
+```{r}
+ggplot(data.frame(x = c(0.8, 1.2)), 
+       aes(x = x)) + 
+  stat_function(fun = dnorm, 
+                args = list(mean = 1,
+                            sd = 0.0735),
+                color = "#17EFF6", lwd = 1) +
+  stat_function(fun = dnorm,
+                args = list(mean = 1,
+                            sd = 0.0735),
+                geom = "area",
+                xlim = c(0.967, 1.033),
+                fill = "#F77A76",
+                alpha = 0.6) + 
+  geom_vline(xintercept = 0.967,
+             linetype = "dashed") +
+  geom_vline(xintercept = 1.033,
+             linetype = "dashed") +
+  labs(x = "Null Distribution of Work Injury Means",
+       y = "(Probability) Density") + 
+  theme_classic()
+```
+6. Visualizing the two-tailed hypothesis test, if the null hypothesis were true that the mean number of times our reference population takes off from work is once per month, the probability of obtaining the sample statistic (that the mean sample time is 0.967) is quite high at 65% of the time. In other words, our p-value corresponds to an area in the tail-ends of the null distribution that is quite large.   
+
