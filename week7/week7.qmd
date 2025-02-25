@@ -332,5 +332,5 @@ lower99_test4 <- obsdiff_test4 - (2.57 * se_diff_weightdiv)
 upper99_test4 <- obsdiff_test4 + (2.57 * se_diff_weightdiv)
 ```
 
-Calculating a two-tailed p-value, our result is basically 0, which means we can reject the null hypothesis that there is no difference in weight between the divorced and non-divorced. It is near impossible that we would obtain our sample proportion difference given the null distribution. Translating this to a confidence interval, the 99% confidence interval for this sample would be $\{`r round(lower99_test4, 3)`, `r round(upper99_test4, 3)`\}$. This interval does not include 0, so alternatively, we can use it to reject the null hypothesis. 
+Calculating a two-tailed p-value, our result is basically 0, which means we can reject the null hypothesis that there is no difference in weight between the divorced and non-divorced. It is near impossible that we would obtain our sample proportion difference given the null distribution. Translating this to a confidence interval, the 99% confidence interval for this sample would be $\{`r round(lower99_test4, 3)`, `r round(upper99_test4, 3)`\}$. This interval does not include 0, so alternatively, we can use it to reject the null hypothesis.  
 
