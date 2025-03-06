@@ -1,0 +1,432 @@
+---
+title: "Bivariate Inference_Week7+8"
+author: "Michael Cao"
+date: 2/24/25
+format:
+  html:
+    self-contained: true
+editor: source
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+```{r}
+library(tidyverse)
+library(gssr)
+library(effectsize)
+library(pwr)
+```
+
+```{r}
+gss2022 <- gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+```
+
+**Hypothesis Test #1**
+
+For the binary variable *pres20* from the 2022 GSS ("Did you vote for Biden"), grouped the variable *sex* (M/F). 
+
+```{r}
+data_frame1 <- gss2022 |>
+  select(pres20, sex) |>
+  drop_na() |>
+  mutate(pres20 = if_else(pres20 == 1, 1, 0),
+         sex = if_else(sex == 1, "Male", "Female")) 
+```
+
+Let's ask: is there a difference in votes for Joe Biden between men and women? 
+
+$H_{0} : p_{male} - p_{female} = 0$
+
+$H_{1} : p_{male} - p_{female} \neq 0$
+
+For $\alpha = 0.01$
+
+```{r}
+p1_pressex <- mean(data_frame1$pres20[data_frame1$sex == "Male"])
+p2_pressex <- mean(data_frame1$pres20[data_frame1$sex == "Female"])
+phat_total_pressex <- mean(data_frame1$pres20)
+n1_pressex <- sum(data_frame1$sex == "Male")
+n2_pressex <- sum(data_frame1$sex == "Female")
+```
+
+$\hat{p}_{male} = `r round(p1_pressex, 3)`$
+
+$\hat{p}_{female} = `r round(p2_pressex, 3)`$
+
+$\hat{p}_{male - female} = `r round(p1_pressex - p2_pressex, 3)`$
+
+```{r}
+data_frame1_bar <- gss2022 |>
+  select(pres20, sex) |>
+  drop_na() |>
+  mutate(pres20 = if_else(pres20 == 1, 1, 0),
+         sex = if_else(sex == 1, "Male", "Female")) |>
+           group_by(sex) |>
+           summarize(prop = mean(pres20)) |>
+ggplot(aes(x = sex,
+           y = prop * 100,
+           fill = sex)) + 
+  geom_col() + 
+  scale_fill_manual(values = c("Male" = "#057f8d", "Female" = "#ff7261")) +
+  labs(title = "Voting for Biden by Sex",
+       x = "Sex",
+       y = "% Voters", 
+       caption = "Source: 2022 GSS") +
+  theme_classic()
+print(data_frame1_bar)
+```
+
+```{r, echo = TRUE}
+z_stat1 <- abs((p1_pressex - p2_pressex) / sqrt(phat_total_pressex * (1 - phat_total_pressex) * (1 / n1_pressex + 1 / n2_pressex)))
+round(z_stat1, 3) # Calculating the z-statistic
+p_stat1 <- 2 * (1 - pnorm(abs(z_stat1)))
+p_stat1 # Calculating the p-value
+```
+
+```{r}
+obsdiff_test1 <- p1_pressex - p2_pressex
+SE_test1 <- sqrt(p1_pressex * (1 - p1_pressex) / n1_pressex + p2_pressex * (1 - p2_pressex) / n2_pressex)
+lower99_test1 <- obsdiff_test1 - (2.57 * SE_test1)
+upper99_test1 <- obsdiff_test1 + (2.57 * SE_test1)
+```
+
+Calculating a two-tailed p-value, our result is extremely small, which means we can reject the null hypothesis that there is no difference in men and women who voted Biden. It is beyond extreme that we would obtain our sample proportion difference given the null distribution. Translating this to a confidence interval, the 99% confidence interval for this sample would be $\{`r round(lower99_test1, 3)`, `r round(upper99_test1, 4)`\}$. This interval does not include 0, so alternatively, we can use it to reject the null hypothesis. 
+
+**Hypothesis Test #2** 
+
+For the variable *life* ("Do you find life exciting or not") from the 2022 GSS, grouped by *age* (Younger/Older).
+
+```{r}
+data_frame2 <- gss2022 |>
+  select(life, age) |>
+  drop_na() |>
+  mutate(life = if_else(life == 1, 1, 0),
+         age = if_else(age <= 50, "Younger", "Older"))
+```
+
+Let's ask: is there a difference in life excitement between the younger and the older? 
+
+$H_{0} : p_{younger} - p_{old} = 0$
+
+$H_{1} : p_{younger} - p_{old} \neq 0$
+
+For $\alpha = 0.01$
+
+```{r}
+p1_lifeage <- mean(data_frame2$life[data_frame2$age == "Younger"])
+p2_lifeage <- mean(data_frame2$life[data_frame2$age == "Older"])
+phat_total_lifeage <- mean(data_frame2$life)
+n1_lifeage <- sum(data_frame2$age == "Younger")
+n2_lifeage <- sum(data_frame2$age == "Older")
+```
+
+$\hat{p}_{younger} = `r round(p1_lifeage, 3)`$
+
+$\hat{p}_{older} = `r round(p2_lifeage, 3)`$
+
+$\hat{p}_{younger - older} = `r round(p1_lifeage - p2_lifeage, 3)`$
+
+```{r}
+data_frame2_bar <- gss2022 |>
+  select(life, age) |>
+  drop_na() |>
+  mutate(life = if_else(life == 1, 1, 0),
+         age = if_else(age <= 50, "Younger", "Older")) |>
+           group_by(age) |>
+           summarize(prop = mean(life)) |>
+ggplot(aes(x = age,
+           y = prop * 100,
+           fill = age)) + 
+  geom_col() + 
+  scale_fill_manual(values = c("Younger" = "#057f8d", "Older" = "#ff7261")) +
+  labs(title = "Exciting Lives by Age",
+       x = "Age (Older = 50+)",
+       y = "% with Exciting Lives", 
+       caption = "Source: 2022 GSS") +
+  theme_classic()
+print(data_frame2_bar)
+```
+
+```{r, echo = TRUE}
+z_stat2 <- abs((p1_lifeage - p2_lifeage) / sqrt(phat_total_lifeage * (1 - phat_total_lifeage) * (1 / n1_lifeage + 1 / n2_lifeage)))
+round(z_stat2, 3) # Calculating the z-statistic
+p_stat2 <- 2 * (1 - pnorm(abs(z_stat2)))
+p_stat2 # Calculating the p-value
+```
+
+```{r}
+obsdiff_test2 <- p1_lifeage - p2_lifeage
+SE_test2 <- sqrt(p1_lifeage * (1 - p1_lifeage) / n1_lifeage + p2_lifeage * (1 - p2_lifeage) / n2_lifeage)
+lower99_test2 <- obsdiff_test2 - (2.57 * SE_test2)
+upper99_test2 <- obsdiff_test2 + (2.57 * SE_test2)
+```
+
+Calculating a two-tailed p-value, our result is small but not small enough, which means we fail to reject the null hypothesis that there is no difference in life excitement among the younger and older. It "likely" here that we would obtain our sample proportion difference given the null distribution and our conservative alpha level. Translating this to a confidence interval, the 99% confidence interval for this sample would be $\{`r round(lower99_test2, 5)`, `r round(upper99_test2, 3)`\}$. This interval does include 0, so alternatively, we can use it to fail to reject the null hypothesis. 
+
+**Hypothesis Test #3** 
+
+For the variable *nmbrkids* ("How many children have you ever had") grouped by *degree* status (at least a BA/no BA).
+
+```{r}
+data_frame3<- gss2022 |>
+  select(nmbrkids, degree) |>
+  drop_na() |>
+  mutate(degree = if_else(degree >= 3, "BA+", "<BA"))
+```
+
+Let's ask: is there a difference in the number of children between those with and without a BA degree? 
+
+$H_{0} : \mu_{BA+} - \mu_{<BA} = 0$
+
+$H_{1} : \mu_{BA+} - p_{<BA} \neq 0$
+
+For $\alpha = 0.01$
+
+```{r}
+mean1_childcollege <- mean(data_frame3$nmbrkids[data_frame3$degree == "BA+"])
+mean2_childcollege <- mean(data_frame3$nmbrkids[data_frame3$degree == "<BA"])
+sd1_childcollege <- sd(data_frame3$nmbrkids[data_frame3$degree == "BA+"])
+sd2_childcollege <- sd(data_frame3$nmbrkids[data_frame3$degree == "<BA"])
+n1_childcollege <- sum(data_frame3$degree == "BA+")
+n2_childcollege <- sum(data_frame3$degree == "<BA")
+se_diff_childcollege <- sqrt((sd1_childcollege / n1_childcollege) + (sd2_childcollege / n2_childcollege))
+```
+
+$\bar{x}_{BA_+} = `r round(mean1_childcollege, 3)`$
+
+$\bar{x}_{<BA} = `r round(mean2_childcollege, 3)`$
+
+$\bar{x}_{BA_+ - <BA} = `r round(mean1_childcollege - mean2_childcollege, 3)`$
+
+```{r}
+data_frame3_bar <- gss2022 |>
+  select(nmbrkids, degree) |>
+  drop_na() |>
+  mutate(degree = if_else(degree >= 3, "BA+", "<BA")) |>
+           group_by(degree) |>
+           summarize(mkids = mean(nmbrkids)) |>
+ggplot(aes(x = degree,
+           y = mkids,
+           fill = degree)) + 
+  geom_col() +
+  scale_fill_manual(values = c("BA+" = "#057f8d", "<BA" = "#ff7261")) +
+  labs(title = "Number of Kids by Degree",
+       x = "Degree",
+       y = "Mean Number of Kids", 
+       caption = "Source: 2022 GSS") +
+  theme_classic()
+data_frame3_bar
+```
+
+```{r}
+data_frame3_distribution <- gss2022 |>
+  select(nmbrkids, degree) |>
+  drop_na() |>
+  mutate(degree = if_else(degree >= 3, "BA+", "<BA"))|>
+  ggplot(aes(x = nmbrkids,
+        fill = degree)) +
+        geom_density(alpha = 0.5,
+                     color = NA) +
+        scale_fill_manual(values = c("BA+" = "#057f8d", "<BA" = "#ff7261")) +
+        xlim(0,10) +
+        labs(title = "Distribution of Number of Kids by Degree",
+            x = "nmbrkids",
+            caption = "2022 GSS") 
+data_frame3_distribution
+```
+
+```{r, echo = TRUE}
+z_stat3 <- abs((mean1_childcollege - mean2_childcollege) / se_diff_childcollege)
+round(z_stat3, 3) # Calculating the z-statistic
+p_stat3 <- 2 * (1 - pnorm(abs(z_stat3)))
+p_stat3 # Calculating the p-value
+```
+
+```{r}
+obsdiff_test3 <- mean1_childcollege - mean2_childcollege
+lower99_test3 <- obsdiff_test3 - (2.57 * se_diff_childcollege)
+upper99_test3 <- obsdiff_test3 + (2.57 * se_diff_childcollege)
+```
+
+Calculating a two-tailed p-value, our result is very small, which means we can reject the null hypothesis that there is no difference in the number of children  among those with at least a BA degree and those without. It is highly unlikely that we would obtain our sample proportion difference given the null distribution. Translating this to a confidence interval, the 99% confidence interval for this sample would be $\{`r round(lower99_test3, 3)`, `r round(upper99_test3, 3)`\}$. This interval does not include 0, so alternatively, we can use it to reject the null hypothesis. 
+
+**Effect Size Calculations**
+
+```{r, echo = TRUE}
+data_frame3_other <- gss2022 |> 
+  select(nmbrkids, degree) |>
+  drop_na() |>
+  mutate(degree = if_else(degree >= 3, "BA+", "<BA")) |>
+  mutate(degree = factor(degree, levels = c("BA+", "<BA")))
+
+#Calculating Cohen's d using the "effectsize" package
+cohens_d_childcollege <- cohens_d(nmbrkids ~ degree, 
+                                  data = data_frame3_other, 
+                                  pooled_sd = TRUE)
+cohens_d_childcollege
+
+#Calculating Probability of Superiority using the "effectsize" package
+p_superiority_childcollege <- p_superiority(nmbrkids ~ degree, 
+                                            data = data_frame3_other, 
+                                            parametric = FALSE)
+p_superiority_childcollege
+```
+
+We obtain an Cohen's d of $0.15$, which indicates there's a difference of 0.15 pooled standard deviations between the BA+ and <BA groups, which is pretty small (Cohen's d is negative to indicate directionality, the BA+ group has less kids). The probability of superiority is $0.44$, which indicates the likelihood that a randomly selected individual from the BA+ group has more kids than a randomly selected individual from the <BA group. 
+
+**Power Analysis, Effect Size** 
+
+```{r, echo = TRUE}
+n1_childcollege
+n2_childcollege
+#using this function in the pwr package due to different sample sizes
+pwr.t2n.test(n1 = n1_childcollege, 
+             n2 = n2_childcollege,
+             d = NULL,
+             sig.level = 0.01,
+             power = 0.8,
+             alternative = c("two.sided"))
+```
+
+For $\alpha = 0.01$, our two sample sizes, and an (arbitrary) $power = 0.8$ (20% chance of false negatives), the smallest effect size we could reliably detect is $0.196$. 
+
+**Hypothesis Test #4** 
+
+For the variable *weight* grouped by *divorce* status (Divorced/Non-Divorced). 
+
+```{r}
+data_frame4 <- gss2022 |>
+  select(weight, divorce) |>
+  drop_na() |>
+  mutate(divorce = if_else(divorce == 1, "Divorced", "Non-Divorced"))
+```
+
+Let's ask: is there a difference in weight between the divorced and non-divorced? 
+
+$H_0 : \mu_{divorced} - \mu_{non-divorced} = 0$
+
+$H_0 : \mu_{divorced} - \mu_{non-divorced} \neq 0$
+
+For $\alpha = 0.01$
+
+```{r}
+mean1_weightdiv <- mean(data_frame4$weight[data_frame4$divorce == "Divorced"])
+mean2_weightdiv <- mean(data_frame4$weight[data_frame4$divorce == "Non-Divorced"])
+sd1_weightdiv <- sd(data_frame4$weight[data_frame4$divorce == "Divorced"])
+sd2_weightdiv <- sd(data_frame4$weight[data_frame4$divorce == "Non-Divorced"])
+n1_weightdiv <- sum(data_frame4$divorce == "Divorced")
+n2_weightdiv <- sum(data_frame4$divorce == "Non-Divorced")
+se_diff_weightdiv <- sqrt((sd1_weightdiv / n1_weightdiv) + (sd2_weightdiv / n2_weightdiv))
+```
+
+$\bar{x}_{divorced} = `r round(mean1_weightdiv, 3)`$
+
+$\bar{x}_{non-divorced} = `r round(mean2_weightdiv, 3)`$
+
+$\bar{x}_{divorced - non-divorced} = `r round(mean1_weightdiv - mean2_weightdiv, 3)`$
+
+```{r}
+data_frame4_bar <- gss2022 |>
+  select(weight, divorce) |>
+  drop_na() |>
+  mutate(divorce = if_else(divorce == 1, "Divorced", "Non-Divorced")) |>
+           group_by(divorce) |>
+           summarize(mweight = mean(weight)) |>
+ggplot(aes(x = divorce,
+           y = mweight,
+           fill = divorce)) + 
+  geom_col() +
+  scale_fill_manual(values = c("Divorced" = "#057f8d", "Non-Divorced" = "#ff7261")) +
+  labs(title = "Weight by Divorce Status",
+       x = "Divorce Status",
+       y = "Mean Weight (lbs)", 
+       caption = "Source: 2022 GSS") +
+  theme_classic()
+data_frame4_bar
+```
+
+```{r}
+data_frame4_distribution <- gss2022 |>
+  select(weight, divorce) |>
+  drop_na() |>
+  mutate(divorce = if_else(divorce == 1, "Divorced", "Non-Divorced")) |>
+  ggplot(aes(x = weight,
+        fill = divorce)) +
+        geom_density(alpha = 0.3,
+                     color = NA) +
+        scale_fill_manual(values = c("Divorced" = "#057f8d", "Non-Divorced" = "#ff7261")) +
+        xlim(0, 400) +
+        labs(title = "Distribution of Weight by Degree Status",
+            x = "weight (lbs)",
+            caption = "2022 GSS") 
+data_frame4_distribution
+```
+
+```{r, echo = TRUE}
+z_stat4 <- abs((mean1_weightdiv - mean2_weightdiv) / se_diff_weightdiv)
+round(z_stat4, 3) # Calculating the z-statistic
+p_stat4 <- 2 * (1 - pnorm(abs(z_stat4)))
+p_stat4 # Calculating the p-value
+```
+
+```{r}
+obsdiff_test4 <- mean1_weightdiv - mean2_weightdiv
+lower99_test4 <- obsdiff_test4 - (2.57 * se_diff_weightdiv)
+upper99_test4 <- obsdiff_test4 + (2.57 * se_diff_weightdiv)
+```
+
+Calculating a two-tailed p-value, our result is basically 0, which means we can reject the null hypothesis that there is no difference in weight between the divorced and non-divorced. It is near impossible that we would obtain our sample proportion difference given the null distribution. Translating this to a confidence interval, the 99% confidence interval for this sample would be $\{`r round(lower99_test4, 3)`, `r round(upper99_test4, 3)`\}$. This interval does not include 0, so alternatively, we can use it to reject the null hypothesis. 
+
+**Effect Size Calculations**
+
+```{r, echo = TRUE}
+data_frame4_other <- gss2022 |> 
+  select(weight, divorce) |>
+  drop_na() |>
+  mutate(divorce = if_else(divorce == 1, "Divorced", "Non-Divorced"))
+  
+#Calculating Cohen's d using the "effectsize" package
+cohens_d_weightdiv <- cohens_d(weight ~ divorce, 
+                               data = data_frame4_other, 
+                               pooled_sd = TRUE)
+cohens_d_weightdiv
+
+#Calculating Probability of Superiority using the "effectsize" package
+p_superiority_weightdiv <- p_superiority(weight ~ divorce, 
+                                         data = data_frame4_other, 
+                                         parametric = FALSE)
+p_superiority_weightdiv
+```
+
+We obtain an Cohen's d of $0.09$, which indicates there's a difference of 0.09 pooled standard deviations between the divorced and non-divorced groups (very small). The probability of superiority is $0.54$, which indicates the likelihood that a randomly selected individual from the divorced group weighs more than a randomly selected individual from the non-divorced group. 
+
+**Power Analysis, Effect Size** 
+
+```{r, echo = TRUE}
+n1_weightdiv
+n2_weightdiv
+#using this function in the pwr package due to different sample sizes
+pwr.t2n.test(n1 = n1_weightdiv, 
+             n2 = n2_weightdiv,
+             d = NULL,
+             sig.level = 0.01,
+             power = 0.8,
+             alternative = c("two.sided"))
+```
+
+For $\alpha = 0.01$, our two sample sizes, and an (arbitrary) $power = 0.8$ (20% chance of false negatives), the smallest effect size we could reliably detect is $0.261$. 
+
+**Imaginary Experiment** 
+
+```{r, echo = TRUE}
+pwr.t.test(n = NULL,
+           d = 0.001, 
+           sig.level = 0.001,
+           power = 0.999,
+           alternative = c("two.sided"))
+```
+Just for fun, if we wanted to detect an effect size as small as 0.001 standard deviations, while minimizing the chance of both Type 1 and Type II error, we would need two groups with sample sizes of at least $n = 81428175$, or around 81 million people. Maybe some pissed off UNC fan really wanted to prove that the basketballs pumped at Cameron were *slightly* ever so lighter than the ones pumped at the Dean Dome. 
+
+
