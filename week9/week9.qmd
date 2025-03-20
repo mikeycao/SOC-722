@@ -24,10 +24,6 @@ gss2022 <- gss_get_yr(year = 2022) |>
 
 **Model #1** 
 
-Outcome = Voted for Biden in 2020 Election (yes/no)
-
-Predictor = Support for Capital Punishment (yes/no) 
-
 ```{r}
 data1 <- gss2022 |> 
   select(pres20, cappun) |>
@@ -36,6 +32,30 @@ data1 <- gss2022 |>
          deathpen = if_else(cappun == 1, 1, 0)) |>
   select(biden, deathpen)
 ```
+
+```{r}
+data1_bar <- gss2022 |>
+  select(pres20, cappun) |>
+  drop_na() |>
+  mutate(biden = if_else(pres20 == 1, 1, 0),
+         deathpen = if_else(cappun == 1, "Support", "Against")) |>
+           group_by(deathpen) |>
+           summarize(prop = mean(biden)) |>
+ggplot(aes(x = deathpen,
+           y = prop * 100,
+           fill = deathpen)) + 
+  geom_col() + 
+  scale_fill_manual(values = c("Support" = "#057f8d", "Against" = "#ff7261")) +
+  labs(title = "Voting for Biden by Capital Punishment Stance",
+       x = "Stance on Capital Punishment",
+       y = "% Voters", 
+       caption = "Source: 2022 GSS") +
+  theme_classic()
+print(data1_bar)
+```
+Outcome = Voted for Biden in 2020 Election (yes/no)
+
+Predictor = Support for Capital Punishment (yes/no) 
 
 Setting up a contingency table: 
 
@@ -122,10 +142,6 @@ We can interpret the results of this risk ratio regression to mean that if we ex
 
 **Model #2** 
 
-Outcome = Having children (yes/no)
-
-Predictor = Ever married (yes/no)
-
 ```{r}
 data2 <- gss2022 |>
   select(childs, marital) |>
@@ -134,6 +150,30 @@ data2 <- gss2022 |>
          evermarried = if_else(marital <= 4, 1, 0)) |>
   select(havekids, evermarried)
 ```
+
+```{r}
+data2_bar <- gss2022 |>
+  select(childs, marital) |>
+  drop_na() |>
+  mutate(havekids = if_else(childs >= 1, 1, 0),
+         evermarried = if_else(marital <= 4, "Ever-Married", "Never-Married")) |>
+           group_by(evermarried) |>
+           summarize(prop = mean(havekids)) |>
+ggplot(aes(x = evermarried,
+           y = prop * 100,
+           fill = evermarried)) + 
+  geom_col() + 
+  scale_fill_manual(values = c("Ever-Married" = "#057f8d", "Never-Married" = "#ff7261")) +
+  labs(title = "Having Kids by Marital Status",
+       x = "Marital Status",
+       y = "% Having Kids", 
+       caption = "Source: 2022 GSS") +
+  theme_classic()
+print(data2_bar)
+```
+Outcome = Having children (yes/no)
+
+Predictor = Ever married (yes/no)
 
 Setting up a contingency table: 
 
