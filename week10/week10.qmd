@@ -1,0 +1,319 @@
+---
+title: "GLM_binaryoutcomes_Week10"
+author: "Michael Cao"
+date: 3/24/25
+format:
+  html:
+    self-contained: true
+editor: source
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+```{r}
+library(tidyverse)
+library(gssr)
+library(tinytable)
+```
+
+```{r}
+gss2022 <- gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+```
+
+**Model #1** 
+
+```{r}
+data1 <- gss2022 |> 
+  select(pres20, cappun) |>
+  drop_na() |>
+  mutate(biden = if_else(pres20 == 1, 1, 0),
+         deathpen = if_else(cappun == 1, 1, 0)) |>
+  select(biden, deathpen)
+```
+
+```{r}
+data1_bar <- gss2022 |>
+  select(pres20, cappun) |>
+  drop_na() |>
+  mutate(biden = if_else(pres20 == 1, 1, 0),
+         deathpen = if_else(cappun == 1, "Support", "Against")) |>
+           group_by(deathpen) |>
+           summarize(prop = mean(biden)) |>
+ggplot(aes(x = deathpen,
+           y = prop * 100,
+           fill = deathpen)) + 
+  geom_col() + 
+  scale_fill_manual(values = c("Support" = "#057f8d", "Against" = "#ff7261")) +
+  labs(title = "Voting for Biden by Capital Punishment Stance",
+       x = "Stance on Capital Punishment",
+       y = "% Voters", 
+       caption = "Source: 2022 GSS") +
+  theme_classic()
+print(data1_bar)
+```
+Outcome = Voted for Biden in 2020 Election (yes/no)
+
+Predictor = Support for Capital Punishment (yes/no) 
+
+Setting up a contingency table: 
+
+```{r}
+table(data1$deathpen, data1$biden)
+```
+
+We can write our model as: 
+
+$P(biden_{i} = 1 ) = \alpha + \beta(deathpen_{i})$
+
+Where $\alpha$ represents:
+
+$P(biden_{i} = 1) | deathpen_{i} = 0)$, or the predicted probability of voting for Biden given opposition to the death penalty. 
+
+And where $\beta$ represents:
+
+$P(biden_{i} = 1 | deathpen_{i} = 1) - P(biden_{i} = 1 | deathpen_{i} = 0)$, or the difference in probabilities of voting for Biden between the group supporting capital punishment and the group of those against capital punishment. 
+
+**Difference in Probabilities Regression**
+
+```{r, echo = TRUE}
+model1 <- glm(biden ~ deathpen,
+              data = data1,
+              family = binomial(link = "identity")) 
+#We use the glm function and the family = binomial argument because our left-side 
+#outcome results in a Bernoulli distribution, allowing us to make the right-side 
+#of the equation linear. 
+broom::tidy(model1,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+```{r}
+point_estimate1 <- -0.345
+se_model1 <- 0.0171
+lower99_model1 <- point_estimate1 - (2.576 * se_model1)
+upper99_model1 <- point_estimate1 + (2.576 * se_model1)
+```
+
+We can interpret the results of the difference in probability regression to mean: 
+
+A. The estimated probability of someone voting for Biden given opposition to capital punishment is 82.2%.
+
+B. The estimated probability of someone voting for Biden given support for capital punishment is 0.822 - 0.345 or 47.7%.
+
+C. Someone who favors capital punishment is estimated to be 34.5 percentage points less likely to have voted for Biden than someone who is against capital punishment. The 99% confidence interval for this difference would be $\{`r round(lower99_model1, 3)`, `r round(upper99_model1,3)`\}$. This interval does not include 0, so we could also reject a null hypothesis that is no difference between the two groups for $\alpha$ = 0.01. 
+
+**Risk Ratio Regression** 
+
+Taking the log of the left-side of our model equation means we can rewrite it as: 
+
+$P(biden_{i} = 1 ) = e^{\alpha + \beta(deathpen_{i})}$
+
+Where $\beta$ essentially becomes the log-difference of conditional probabilities or: 
+
+$log(P(biden_{i} = 1 | deathpen_{i} = 1)) - log(P(biden_{i} = 1 | deathpen_{i} = 0))$
+
+Subtracting logs means the expression is equivalent to the risk ratio/relative risk as a division problem or: 
+
+$log(P(biden_{i} = 1 | deathpen_{i} = 1)) - log(P(biden_{i} = 1 | deathpen_{i} = 0)) = \frac{P(biden_{i} = 1 | deathpen_{i} = 1)}{P(biden_{i} = 1 | deathpen_{i} = 0)}$
+
+```{r, echo = TRUE}
+model2 <- glm(biden ~ deathpen,
+              data = data1,
+              family = binomial(link = "log"))
+#We change the link to log in order to take the log of the left-hand side and
+#keep the right-side linear. 
+broom::tidy(model2,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+```{r, echo = TRUE, results = TRUE}
+exp(-0.544)
+```
+
+```{r}
+point_estimate2 <- -0.544
+se_model2 <- 0.0298
+lower99exp_model2 <- exp(point_estimate2 - (2.576 * se_model2))
+upper99exp_model2 <- exp(point_estimate2 + (2.576 * se_model2))
+```
+
+We can interpret the results of this risk ratio regression to mean that if we exponentiate the logged $\beta$ or logged probability differences in our groups, we can say someone who supports capital punishment has an estimated probability (risk) of voting for Biden that is 0.58 times the risk for someone who is opposed to capital punishment. The 99% confidence interval for this risk ratio would be $\{`r round(lower99exp_model2, 3)`, `r round(upper99exp_model2,3)`\}$, which means favoring capital punishment reduces the probability (risk) of voting for Biden between 0.627 and 0.538 times. 
+
+**Odds Ratio Regression**
+
+We can write probability as an function of odds where: 
+
+$odds_{biden_{i} = 1} = \frac{P(biden_{i} = 1)}{1 - P(biden_{i} = 1)}$
+
+Taking the log odds, we can rewrite our model equation as: 
+
+$P(biden_{i} = 1) = \frac{e^{\alpha + \beta(deathpen_{i})}}{1 + e^{\alpha + \beta(deathpen_{i})}}$
+
+Where $\beta$ essentially becomes the log-difference of odds, which is equivalent to the log odds ratio: 
+
+$\beta = log(OR_{biden_{i}} = log\frac{P(biden_{i} = 1) | P(deathpen_{i} = 1)}{1 - P(biden_{i} = 1) | P(deathpen_{i} = 1)} - log\frac{P(biden_{i} = 1) | P(deathpen_{i} = 0)}{1 - P(biden_{i} = 1) | P(deathpen_{i} = 0)}$
+
+```{r, echo = TRUE}
+model3 <- glm(biden ~ deathpen,
+              data = data1,
+              family = binomial(link = "logit"))
+#We change the link to logit in order to take the log odds of the left-hand side and
+#keep the right-side linear. 
+broom::tidy(model3,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+```{r, echo = TRUE}
+exp(-1.622) 
+```
+
+We can interpret the results of this odds ratio regression to mean that if we exponentiate the logged $\beta$ or logged odds differences in our groups, we can say someone supports capital punishment has much lower odds (0.19 times) of supporting Biden than the odds someone who does not support capital punishment. The 99% confidence interval for this odds ratio would be $\{0.154, 0.251\}$.
+
+**Model #2** 
+
+```{r}
+data2 <- gss2022 |>
+  select(childs, marital) |>
+  drop_na() |>
+  mutate(havekids = if_else(childs >= 1, 1, 0),
+         evermarried = if_else(marital <= 4, 1, 0)) |>
+  select(havekids, evermarried)
+```
+
+```{r}
+data2_bar <- gss2022 |>
+  select(childs, marital) |>
+  drop_na() |>
+  mutate(havekids = if_else(childs >= 1, 1, 0),
+         evermarried = if_else(marital <= 4, "Ever-Married", "Never-Married")) |>
+           group_by(evermarried) |>
+           summarize(prop = mean(havekids)) |>
+ggplot(aes(x = evermarried,
+           y = prop * 100,
+           fill = evermarried)) + 
+  geom_col() + 
+  scale_fill_manual(values = c("Ever-Married" = "#057f8d", "Never-Married" = "#ff7261")) +
+  labs(title = "Having Kids by Marital Status",
+       x = "Marital Status",
+       y = "% Having Kids", 
+       caption = "Source: 2022 GSS") +
+  theme_classic()
+print(data2_bar)
+```
+Outcome = Having children (yes/no)
+
+Predictor = Ever married (yes/no)
+
+Setting up a contingency table: 
+
+```{r}
+table(data2$evermarried, data2$havekids)
+```
+
+We can write our model as: 
+
+$P(havekids_{i} = 1 ) = \alpha + \beta(evermarried_{i})$
+
+Where $\alpha$ represents:
+
+$P(havekids_{i} = 1) | evermarried_{i} = 0)$, or the predicted probability of having kids given being never married. 
+
+And where $\beta$ represents:
+
+$P(havekids_{i} = 1 | evermarried_{i} = 1) - P(havekids_{i} = 1 | evermarried_{i} = 0)$, or the difference in probabilities of  having kids between the group who has ever been married and the group that has never been married. 
+
+**Difference in Probabilities Regression**
+
+```{r, echo = TRUE}
+model4 <- glm(havekids ~ evermarried,
+              data = data2,
+              family = binomial(link = "identity")) 
+broom::tidy(model4,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+```{r}
+point_estimate3 <- 0.505
+se_model3 <- 0.0147
+lower99_model3 <- point_estimate3 - (2.576 * se_model3)
+upper99_model3 <- point_estimate3 + (2.576 * se_model3)
+```
+
+We can interpret the results of the difference in probability regression to mean: 
+
+A. The estimated probability of someone having kids given never being married is 34.1%.
+
+B. The estimated probability of someone having kids given given ever being married is 0.341 + 0.505 or 84.6%.
+
+C. Someone who has ever been married is estimated to be 50.5 percentage points more likely to have kids than someone who has never been married. The 99% confidence interval for this difference would be $\{`r round(lower99_model3, 3)`, `r round(upper99_model3,3)`\}$. This interval does not include 0, so we could also reject a null hypothesis that there is no difference between the two groups for $\alpha$ = 0.01. 
+
+**Risk Ratio Regression** 
+
+Taking the log of the left-side of our model equation means we can rewrite it as: 
+
+$P(havekids_{i} = 1 ) = e^{\alpha + \beta(evermarried_{i})}$
+
+Where $\beta$ essentially becomes the log-difference of conditional probabilities or: 
+
+$log(P(havekids_{i} = 1 | evermarried_{i} = 1)) - log(P(havekids_{i} = 1 | evermarried_{i} = 0))$
+
+Subtracting logs means the expression is equivalent to the risk ratio/relative risk as a division problem or: 
+
+$log(P(havekids_{i} = 1 | evermarried_{i} = 1)) - log(P(havekids_{i} = 1 | evermarried_{i} = 0)) = \frac{P(havekids_{i} = 1 | evermarried_{i} = 1)}{P(havekids_{i} = 1 | evermarried_{i} = 0)}$
+
+```{r, echo = TRUE}
+model5 <- glm(havekids ~ evermarried,
+              data = data2,
+              family = binomial(link = "log"))
+
+broom::tidy(model5,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+```{r, echo = TRUE, results = TRUE}
+exp(0.909)
+```
+
+```{r}
+point_estimate4 <- 0.909
+se_model4 <- 0.0390
+lower99exp_model4 <- exp(point_estimate4 - (2.576 * se_model4))
+upper99exp_model4 <- exp(point_estimate4 + (2.576 * se_model4))
+```
+
+We can interpret the results of this risk ratio regression to mean that if we exponentiate the logged $\beta$ or logged probability differences in our groups, we can say someone who has ever been married has an estimated probability (risk) of having kids that is 2.48 times higher than the risk for someone who has never been married. The 99% confidence interval for this risk ratio would be $\{`r round(lower99exp_model4, 2)`, `r round(upper99exp_model4,2)`\}$, which means ever being married increases the risk of having kids anywhere between 2.24 and 2.74 times. 
+
+**Odds Ratio Regression**
+
+We can write probability as an function of odds where: 
+
+$odds_{havekids_{i} = 1} = \frac{P(havekids_{i} = 1)}{1 - P(havekids_{i} = 1)}$
+
+Taking the log odds, we can rewrite our model equation as: 
+
+$P(havekids_{i} = 1) = \frac{e^{\alpha + \beta(evermarried_{i})}}{1 + e^{\alpha + \beta(evermarried_{i})}}$
+
+Where $\beta$ essentially becomes the log-difference of odds, which is equivalent to the log odds ratio: 
+
+$\beta = log(OR_{havekids_{i}} = log\frac{P(havekids_{i} = 1) | P(evermarried_{i} = 1)}{1 - P(havekids_{i} = 1) | P(evermarried_{i} = 1)} - log\frac{P(havekids_{i} = 1) | P(evermarried_{i} = 0)}{1 - P(havekids_{i} = 1) | P(evermarried_{i} = 0)}$
+
+```{r, echo = TRUE}
+model6 <- glm(havekids ~ evermarried,
+              data = data2,
+              family = binomial(link = "logit"))
+#We change the link to logit in order to take the log odds of the left-hand side and
+#keep the right-side linear. 
+broom::tidy(model6,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+```{r, echo = TRUE}
+exp(2.36) 
+```
+
+We can interpret the results of this odds ratio regression to mean that if we exponentiate the logged $\beta$ or logged odds differences in our groups, we can say someone is ever-married has much higher odds (10.6 times) of having kids than the odds someone who has never been married. The 99% confidence interval for this odds ratio would be $\{8.67, 13.1\}$.
