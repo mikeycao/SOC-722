@@ -133,7 +133,7 @@ exp(-0.544)
 
 ```{r}
 point_estimate2 <- -0.544
-se_model2 <- -0.0298
+se_model2 <- 0.0298
 lower99exp_model2 <- exp(point_estimate2 - (2.576 * se_model2))
 upper99exp_model2 <- exp(point_estimate2 + (2.576 * se_model2))
 ```
