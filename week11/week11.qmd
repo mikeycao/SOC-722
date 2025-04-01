@@ -1,0 +1,207 @@
+---
+title: "GLM_practice_Week11"
+author: "Michael Cao"
+date: 3/27/25
+format:
+  html:
+    self-contained: true
+editor: source
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+library(gssr)
+```
+
+```{r}
+gss2022 <- gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+```
+
+**Models 1, 2, 3: Estimating Binary GLMs**
+
+$biden_{i = 1} = \alpha + \beta(gunlaw_{i})$
+
+predictor: favor stronger gun laws 
+
+outcome: voted for Biden 
+
+```{r}
+data1 <- gss2022 |> 
+  select(pres20, gunlaw) |>
+  drop_na() |>
+  mutate(biden = if_else(pres20 == 1, 1, 0),
+         gunlaw = if_else(gunlaw == 1, 1, 0)) |>
+  select(biden, gunlaw)
+```
+
+**Linear Probability Model**
+
+```{r, echo = TRUE}
+model1 <- glm(biden ~ gunlaw,
+              data = data1,
+              family = binomial(link = "identity")) 
+ 
+broom::tidy(model1,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+* The estimated probability of someone voting Biden given that they oppose stronger gun laws is 32.8% and 72.7% if they favor stronger gun laws.
+* Someone who favors stronger gun laws is 39.9 percentage points more likely to have voted for Biden than someone who opposes stronger gun laws. 
+
+**Calculating Log-Likelihood Manually and by Function**
+
+```{r, echo = TRUE}
+data1 <- 
+  data1 |> 
+  mutate(predprob = predict(model1,
+                            type = "response")) |>
+  mutate(l = dbinom(biden, 1, predprob),
+         ll = log(l))
+```
+
+```{r, echo = TRUE, results = TRUE}
+sum(data1$ll)
+logLik(model1)
+```
+
+**Log Probability Model** 
+
+```{r, echo = TRUE}
+model2 <- glm(biden ~ gunlaw,
+              data = data1,
+              family = binomial(link = "log")) 
+ 
+broom::tidy(model2,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+```{r, echo = TRUE, results = TRUE}
+exp(0.797)
+```
+
+* Someone who favors stronger gun laws has an estimated probability of voting Biden that is 2.21 times the estimated probability for someone is opposed to stronger gun laws. 
+
+**Logit (Log Odds) Model** 
+
+```{r}
+model3 <- glm(biden ~ gunlaw,
+              data = data1,
+              family = binomial(link = "logit")) 
+ 
+broom::tidy(model3,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+```{r, echo = TRUE, results = TRUE}
+exp(1.70)
+```
+
+* Someone who favors stronger gun laws has much high odds (5.5 times) of supporting Biden than the odds of someone who opposes stronger gun laws. 
+
+**Gaussian Regression (Estimating a Linear Model)**
+
+$weight_{i} = \alpha + \beta(evermarried_{i})$
+
+predictor: ever-married 
+
+outcome: weight 
+
+```{r}
+data2 <- gss2022 |>
+  select(weight, marital) |>
+  drop_na() |>
+  mutate(evermarried = if_else(marital <= 4, 1, 0)) |>
+  select(weight, evermarried)
+```
+
+```{r, echo = TRUE}
+model4 <- lm(weight ~ evermarried,
+             data = data2)
+ 
+broom::tidy(model4,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+* The estimated mean weight of someone who has never been married is 185 pounds. 
+* Someone who has ever been married is estimated to 0.313 pounds more than someone who has never been married.
+
+**Calculating Log-Likelihood Manually and by Function**
+
+```{r, echo = TRUE}
+data2 <- 
+  data2 |>
+    mutate(mean = predict(model4),
+           sd = sd(model4$residuals)) |>
+    mutate(l  = dnorm(weight,      
+                      mean = mean,
+                      sd = sd),
+           ll = dnorm(weight,      
+                      mean = mean,
+                      sd = sd,
+                      log = TRUE))
+```
+
+```{r, echo = TRUE, results = TRUE}
+sum(data2$ll)
+logLik(model4)
+```
+
+**Poisson Regression (Estimating a Count Model)**
+
+$kids_{i} = \alpha + \beta(evermarried_{i})$
+
+predictor = ever-married
+
+outcome = number of kids 
+
+```{r}
+data3 <- gss2022 |>
+  select(nmbrkids, marital) |>
+  drop_na() |>
+  mutate(kids = nmbrkids,
+         evermarried = if_else(marital <= 4, 1, 0)) |>
+  select(kids, evermarried)
+```
+
+```{r, echo = TRUE}
+model5 <- glm(kids ~ evermarried,
+             data = data3,
+             family = poisson(link = "log"))
+ 
+broom::tidy(model5,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+```{r, echo = TRUE, results = TRUE}
+exp(0.337)
+exp(0.532)
+```
+
+* The estimated mean number of kids of someone who has never been married is 1.40. 
+* Someone who has ever been married is estimated to have 1.70 times as many kids as someone who has never been married. 
+
+**Calculating Log-Likelihood Manually and by Function**
+
+```{r, echo = TRUE}
+data3 <- 
+  data3 |>
+    mutate(mean = predict(model5, type = "response")) |>
+    mutate(l  = dpois(kids,      
+                      lambda = mean),
+           ll = dpois(kids,      
+                      lambda = mean,
+                      log = TRUE))
+```
+
+```{r, echo = TRUE, results = TRUE}
+sum(data3$ll)
+logLik(model5)
+```
+
