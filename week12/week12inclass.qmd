@@ -1,0 +1,42 @@
+---
+title: "Week12_in_class_2_dummy_var_practice"
+author: "Michael Cao"
+date: 4/8/25
+format:
+  html:
+    self-contained: true
+editor: source
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+```{r}
+library(tidyverse)
+library(gssr)
+
+gss2022 <- gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+```
+
+```{r}
+data1 <- gss2022 |>
+  select(polviews, attend, degree) |>
+  mutate(conserv = if_else(polviews >= 5, 1, 0),
+         weekly = if_else(attend == 7, 1, 0), 
+         college = if_else(degree >= 3, 1, 0)) |>
+  select(polviews, conserv, weekly, college) |>
+  drop_na() 
+```
+
+```{r}
+summary_data <- data1 |>
+  group_by(weekly, college) |>
+  summarize(
+    n = n(),
+    p_conserv = mean(conserv))
+```
+
+
+
+
