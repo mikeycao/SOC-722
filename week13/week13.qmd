@@ -1,0 +1,125 @@
+---
+title: "Saturated Models and Model Selection_Week13"
+author: "Michael Cao"
+date: 3/27/25
+format:
+  html:
+    self-contained: true
+editor: source
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+```{r}
+library(tidyverse)
+library(gssr)
+library(gssrdoc)
+```
+
+```{r}
+gss2022 <- gss_get_yr(year = 2022) |>
+  haven::zap_labels()
+```
+
+**Binary Predictors/Dummy Variables** 
+
+1. $\text{Lower-Working Class}_{i}$
+
+2. $\text{Liberal}_{i}$
+
+```{r}
+data1 <- gss2022 |>
+  select(class, polviews) |>
+  drop_na() |> 
+  mutate(lwclass = if_else(class %in% c(1, 2), 1, 0),
+         liberal = if_else(polviews <= 3, 1, 0)) |>
+  select(lwclass, liberal)
+```
+
+**Gaussian Regression**
+
+Outcome: $\text{Inflation-Adjusted Family Income}$ or $\mu_{i}$
+
+```{r}
+data2 <- gss2022 |>
+  select(class, polviews, coninc) |>
+  drop_na() |> 
+  mutate(lwclass = if_else(class %in% c(1, 2), 1, 0),
+         liberal = if_else(polviews <= 3, 1, 0),
+         famincome = coninc) |> 
+  select(lwclass, liberal, famincome) 
+```
+
+```{r, results = TRUE}
+data2sum <- data2 |>
+  group_by(lwclass, liberal) |>
+  summarize(
+    n = n(),
+    m_famincome = mean(famincome)
+  )
+data2sum 
+```
+
+Saturated Model Functional Form: 
+
+$\mu_{i} = \alpha + \beta_{1}(\text{lwclass}_{i}) + \beta_{2}(\text{liberal}_{i}) + \beta_{3}(\text{lwclass}_{i} \times \text{liberal}_{i})$ 
+
+Where: 
+
+$\alpha = \$69,207$ or that someone who does not identify as low-working class nor liberal has an estimated family income of 69,207 dollars. 
+
+$\beta_{1} = \$33,996 - \$69,207$ or that someone who identifies as low-working class but not liberal has an estimated family income that is 35,211 less dollars than that or someone who is neither low-working class nor liberal.
+
+$\beta_{2} = \$79,031 - \$69,207$ or that someone who identifies as liberal but not as low-working class has an estimated family income that is 9,824 more dollars than that of someone who is neither working-middle class nor liberal. 
+
+$\beta_{3} = \$31,875 - (\$69,207 - \$35,211 + \$9,824)$ or that someone who idenitfies as both low-working class and liberal has an estimated family income that is 11,945 dollars less than someone who is neither low-working class nor liberal. 
+
+Checked with the model results: 
+
+```{r}
+model1 <- lm(famincome ~ lwclass * liberal,
+             data = data2)
+ 
+broom::tidy(model1,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+Restricted Model Functional Form: 
+
+$\mu_{i} = \alpha + \beta_{1}(\text{lwclass}_{i}) + \beta_{2}(\text{liberal}_{i})$ 
+
+```{r}
+model2 <- lm(famincome ~ lwclass + liberal,
+             data = data2)
+ 
+broom::tidy(model2,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+Comparing the Saturated vs. Restricted Model
+
+Likelihood Ratio Test:
+
+```{r}
+lrt <- anova(model2, model1, test = "Chisq")
+
+broom::tidy(lrt,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+AIC Test:
+
+```{r}
+AIC(model1)
+AIC(model2)
+```
+Looking at the LRT and AIC results, we can say that with the higher LRT and lower AIC, the saturated here is preferred. We reject the null that there is no difference between the saturated and restricted models. 
+
+**Logit Regression** 
+
+**Poisson Regression** 
+
