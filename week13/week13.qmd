@@ -1,13 +1,13 @@
 ---
-title: "Saturated Models and Model Selection_Week13"
+title: "Saturated Models and Model Selection Practice"
 author: "Michael Cao"
-date: 3/27/25
+date: 4/9/25
 format:
   html:
     self-contained: true
 editor: source
 execute:
-  echo: false
+  echo: true
   message: false
   warning: false
 ---
@@ -28,18 +28,23 @@ gss2022 <- gss_get_yr(year = 2022) |>
 
 2. $\text{Liberal}_{i}$
 
-```{r}
+```{r, results = TRUE}
 data1 <- gss2022 |>
   select(class, polviews) |>
   drop_na() |> 
   mutate(lwclass = if_else(class %in% c(1, 2), 1, 0),
          liberal = if_else(polviews <= 3, 1, 0)) |>
-  select(lwclass, liberal)
+  select(lwclass, liberal) |>
+  group_by(lwclass, liberal) |>
+  summarize(
+    n = n()
+  )
+data1
 ```
 
 **Gaussian Regression**
 
-Outcome: $\text{Inflation-Adjusted Family Income}$ or $\mu_{i}$
+Outcome: $\text{Inflation-Adjusted Family Income}$ or the expected value for $\mu_{i}$
 
 ```{r}
 data2 <- gss2022 |>
@@ -113,13 +118,177 @@ broom::tidy(lrt,
 
 AIC Test:
 
-```{r}
-AIC(model1)
-AIC(model2)
+```{r, echo = TRUE}
+AIC(model1) #AIC score is lower
+AIC(model2) 
 ```
-Looking at the LRT and AIC results, we can say that with the higher LRT and lower AIC, the saturated here is preferred. We reject the null that there is no difference between the saturated and restricted models. 
+Looking at the LRT and AIC results, we can say that the saturated model is preferred. We reject the null that there is no difference between the saturated and restricted models. 
 
 **Logit Regression** 
 
+Outcome: $\text{Fear Walking at Night in Neighborhood}$ or the expected value for $p_{i}$*
+
+*The GSS question was: "Is there any area right around here--that is, within a mile--where you would be afraid to walk alone at night?"
+
+```{r}
+data3 <- gss2022 |>
+  select(class, polviews, fear) |>
+  drop_na() |> 
+  mutate(lwclass = if_else(class %in% c(1, 2), 1, 0),
+         liberal = if_else(polviews <= 3, 1, 0),
+         fear = if_else(fear == 1, 1, 0)) |> 
+  select(lwclass, liberal, fear) 
+```
+
+```{r}
+data3_sum <- data3 |>
+  group_by(lwclass, liberal) |>
+  summarize(
+    n = n(),
+    prop_fear = mean(fear)
+  )
+data3_sum
+```
+
+Saturated Model Functional Form: 
+
+$p_{i} = \frac{e^{\alpha + \beta_{1}(\text{lwclass}_{i}) + \beta_{2}(\text{liberal}_{i}) + \beta_{3}(\text{lwclass}_{i} \times \text{liberal}_{i})}}{1 + e^{\alpha + \beta_{1}(\text{lwclass}_{i}) + \beta_{2}(\text{liberal}_{i}) + \beta_{3}(\text{lwclass}_{i} \times \text{liberal}_{i})}}$ 
+
+Where: 
+
+$\alpha = \log(\frac{0.333}{1 - 0.333})$ or that someone who does not identify as low-working class nor liberal is estimated to have -0.69 log odds of fearing walking at night in their neighborhood. 
+
+$\beta_{1} = \log(\frac{0.426}{1 - 0.426}) - (-0.69))$ or that someone who identifies as low-working class but not liberal is estimated to have 0.39 higher log odds of fearing walking at night in their neighborhood than someone who is neither working-middle class nor liberal. 
+
+$\beta_{2} = \log(\frac{0.377}{1 - 0.377}) - (-0.69)$ or that someone who identifies as liberal but not as low-working class is estimated to have 0.19 higher log odds of fearing walking at night in their neighborhood than someone who is neither working-middle class nor liberal. 
+
+$\beta_{3} = \log(\frac{0.484}{1 - 0.484} - (-0.69 + 0.39 + 0.19)$ or that someone who identifies as both low-working class and liberal is estimated to have 0.045 higher log odds of fearing walking at night in their neighborhood than someone who is neither working-middle class nor liberal. 
+
+Checked with the model results: 
+
+```{r}
+model3 <- glm(fear ~ lwclass * liberal,
+              data = data3,
+              family = binomial(link = "logit"))
+
+broom::tidy(model3,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+Restricted Model Functional Form: 
+
+$p_{i} = \frac{e^{\alpha + \beta_{1}(\text{lwclass}_{i}) + \beta_{2}(\text{liberal}_{i})}}{1 + e^{\alpha + \beta_{1}(\text{lwclass}_{i}) + \beta_{2}(\text{liberal}_{i})}}$ 
+
+```{r}
+model4 <- glm(fear ~ lwclass + liberal,
+             data = data3,
+             family = binomial(link = "logit"))
+ 
+broom::tidy(model4,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+Comparing the Saturated vs. Restricted Model
+
+Likelihood Ratio Test:
+
+```{r}
+lrt2 <- anova(model4, model3, test = "Chisq")
+
+broom::tidy(lrt2,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+AIC Test:
+
+```{r, echo = TRUE}
+AIC(model3)
+AIC(model4) #AIC score is lower
+```
+Looking at the LRT and AIC results, we can say the restricted model is more preferred here. We fail to reject the null that there is no difference between the saturated and restricted models. 
+
 **Poisson Regression** 
 
+Outcome: $\text{Number of Children}$ or the expected value for $\lambda_{i}$
+
+```{r}
+data4 <- gss2022 |>
+  select(class, polviews, nmbrkids) |>
+  drop_na() |> 
+  mutate(lwclass = if_else(class %in% c(1, 2), 1, 0),
+         liberal = if_else(polviews <= 3, 1, 0),
+         kids = nmbrkids) |> 
+  select(lwclass, liberal, kids) 
+
+```
+
+```{r}
+data4_sum <- data4 |>
+  group_by(lwclass, liberal) |>
+  summarize(
+    n = n(),
+    meankids = mean(kids)
+  )
+data4_sum
+```
+
+Saturated Model Functional Form:
+
+$\lambda_{i} = e^{\alpha + \beta_{1}(\text{lwclass}_{i}) + \beta_{2}(\text{liberal}_{i}) + \beta_{3}(\text{lwclass}_{i} \times \text{liberal}_{i})}$
+
+Where: 
+
+$\alpha = \log(2.11)$ or that someone who does not identify as low-working class nor liberal has an estimated 0.75 log kids. 
+
+$\beta_{1} = \log(2.15) - \log(2.11)$ or that someone who identifies as low-working class but not liberal has an estimated 0.019 more log kids than that or someone who is neither low-working class nor liberal.
+
+$\beta_{2} = \log(1.79) - \log(2.11)$ or that someone who identifies as liberal but not as low-working class has an estimated 0.16 less log kids than that of someone who is neither working-middle class nor liberal. 
+
+$\beta_{3} = \log(1.84) - (0.75 + 0.019 - 0.16)$ or that someone who idenitfies as both low-working class and liberal has an estimated 0.00077 more log kids than someone who is neither low-working class nor liberal. 
+
+Checked with the model results: 
+
+```{r}
+model5 <- glm(kids ~ lwclass * liberal,
+              data = data4,
+              family = poisson(link = "log"))
+
+broom::tidy(model5,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+Restricted Model Functional Form: 
+
+$\lambda_{i} = \alpha + \beta_{1}(\text{lwclass}_{i}) + \beta_{2}(\text{liberal}_{i})$ 
+
+```{r}
+model6 <- glm(kids ~ lwclass + liberal,
+             data = data4,
+             family = poisson(link = "log"))
+ 
+broom::tidy(model6,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+
+Comparing the Saturated vs. Restricted Model
+
+Likelihood Ratio Test:
+
+```{r}
+lrt3 <- anova(model6, model5, test = "Chisq")
+
+broom::tidy(lrt3,
+            conf.int = TRUE,
+            conf.level = 0.99)
+```
+AIC Test:
+
+```{r, echo = TRUE}
+AIC(model5)
+AIC(model6) #AIC score is lower
+```
+Looking at the LRT and AIC results, we can say the restricted model is more preferred here. We fail to reject the null that there is no difference between the saturated and restricted models. 
